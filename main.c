@@ -16,28 +16,41 @@ typedef struct Produto {
     int qualidade;
 } TProduto;
 
+
 int geraNumeroAleatorio(int qtdValores) {
     time_t t;
-    srand((unsigned) time(&t));
+    srand((unsigned) time(&t) + (getpid() * 5));
     return rand() % (qtdValores);
+}
+
+char* classificaProduto(TProduto* produto){
+    if(strcmp(produto->nome, "moleton") || strcmp(produto->nome, "jeans") || strcmp(produto->nome, "casaco") ){
+        if(produto->qualidade < 4){
+            return "reprovado!";
+        }
+    }
+    if(produto->tamanho == 'G'){
+        if(produto->qualidade <3){
+            return "reprovado!";
+        }
+    }
+    if (produto->qualidade == 5){
+        return "excelente!";
+    }
+    return "bom!";
 }
 
 void consumidor(int* file_pipes){
     int data_processed;
     TProduto *produtoRecebe;
     produtoRecebe = (TProduto*)malloc(2 * sizeof(TProduto));
-    int sleepTime;
-
 
     while(1){
-        sleepTime = 1;
         data_processed = read(file_pipes[0], produtoRecebe,sizeof(produtoRecebe->nome) + sizeof(produtoRecebe->qualidade) + sizeof(produtoRecebe->tamanho));
-
-        if (produtoRecebe->tamanho == 'G'){
-            sleepTime ++;
-        }
-        sleep(sleepTime);
-        printf("Read %d bytes: %s - %c - %d\n", data_processed, produtoRecebe->nome, produtoRecebe->tamanho, produtoRecebe->qualidade);
+        sleep(1 + geraNumeroAleatorio(3)); //1 a 3 segundos
+        classificaProduto(produtoRecebe);
+        printf("\033[0;31m");//Vermelho 
+        printf("---Consumindo---\nNome:%s\nTamanho:%c\nQualidade:%d\nEsse produto está %s\n", produtoRecebe->nome, produtoRecebe->tamanho, produtoRecebe->qualidade, classificaProduto(produtoRecebe));
     }
     exit(EXIT_SUCCESS);
 }
@@ -54,15 +67,12 @@ char defineTamanhoProduto(){
     switch (i)
     {   
     case 0:
-        sleep(1);
         return 'P';
         break;
     case 1:
-        sleep(1);
         return 'M';
         break;
     case 2:
-        sleep(2);
         return 'G';
         break;
     }
@@ -70,19 +80,6 @@ char defineTamanhoProduto(){
 
 int defineQualidadeProduto(){
     int i = geraNumeroAleatorio(QTD_QUALIDADE) + 1;
-
-    switch (i)
-    {
-    case 4:
-        sleep(1);
-        break;
-    case 5:
-        sleep(2);
-        break;
-    default:
-        break;
-    }
-
     return (i);
 }
 
@@ -92,11 +89,13 @@ void produtor(int* file_pipes){
     produto = (TProduto*)malloc(2 * sizeof(TProduto));
 
     while(1){
+        sleep(4 + geraNumeroAleatorio(5));  //4 a 8 segundos
         defineNomeProduto(produto->nome);
         produto->tamanho = defineTamanhoProduto();
-        produto->qualidade = defineQualidadeProduto();    
+        produto->qualidade = defineQualidadeProduto();
+        printf("\033[0m"); //Cor padrão
+        printf("---Produzindo---\nNome:%s\nTamanho:%c\nQualidade:%d\n", produto->nome, produto->tamanho, produto->qualidade);
         data_processed = write(file_pipes[1], produto, sizeof(produto->nome) + sizeof(produto->tamanho) + sizeof(produto->qualidade) );
-        printf("Wrote %d bytes\n", data_processed);
     }
     exit(EXIT_SUCCESS);
 }
